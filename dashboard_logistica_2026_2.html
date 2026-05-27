@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Logística 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181c27;
+    --surface2:  #1e2333;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.12);
+    --text:      #e8eaf0;
+    --muted:     #7a8099;
+    --accent:    #4d7cfe;
+    --accent2:   #38d9a9;
+    --warn:      #f5a623;
+    --danger:    #e24b4a;
+    --ok:        #5cb85c;
+    --purple:    #9b59b6;
+    --radius:    12px;
+    --radius-sm: 8px;
+    --font:      'DM Sans', sans-serif;
+    --mono:      'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 220px;
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    z-index: 100;
+  }
+
+  .logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .logo-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .logo-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all .18s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(77,124,254,0.08); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: 220px;
+    min-height: 100vh;
+    padding: 32px;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .page-title { font-size: 22px; font-weight: 600; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  .toggle-group {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .toggle-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-family: var(--font);
+    font-weight: 500;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .toggle-btn.active { background: var(--accent); color: #fff; }
+
+  select {
+    padding: 7px 12px;
+    font-size: 12px;
+    font-family: var(--font);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+  }
+  select:focus { border-color: var(--accent); }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .kpi-card:hover::before { opacity: 1; }
+  .kpi-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  .kpi-value { font-size: 24px; font-weight: 600; font-family: var(--mono); }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .kpi-ok { color: var(--ok); }
+  .kpi-warn { color: var(--warn); }
+  .kpi-danger { color: var(--danger); }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+
+  /* ── CHART CARDS ── */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .chart-wrap { position: relative; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── TABLE ── */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  tbody td:first-child { font-family: var(--font); font-weight: 500; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .row-total td { background: rgba(77,124,254,0.06); font-weight: 600; border-top: 1px solid var(--border2); }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .badge-ok  { background: rgba(92,184,92,.15);  color: var(--ok); }
+  .badge-warn{ background: rgba(245,166,35,.15); color: var(--warn); }
+  .badge-bad { background: rgba(226,75,74,.15);  color: var(--danger); }
+
+  /* ── PROGRESS BAR ── */
+  .prog-wrap { display: flex; align-items: center; gap: 8px; }
+  .prog-bar { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 2px; }
+  .prog-label { font-size: 11px; font-family: var(--mono); min-width: 34px; color: var(--muted); }
+
+  /* ── NO DATA ── */
+  .no-data {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--muted); font-style: italic;
+  }
+
+  /* ── DIVIDER ── */
+  .section-gap { margin-bottom: 18px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .logo-title, .logo-sub, .nav-item span { display: none; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .main { margin-left: 60px; padding: 20px 16px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">Log Dashboard</div>
+    <div class="logo-sub">2026 · Realizado</div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="showPage('custos')" id="nav-custos">
+      <span class="nav-icon">📦</span>
+      <span>Custos Log 2026</span>
+    </div>
+    <div class="nav-item" onclick="showPage('embossing')" id="nav-embossing">
+      <span class="nav-icon">🏭</span>
+      <span>Embossing & SLA</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div>Atualizado Mai/26</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ══════════════ PÁGINA 1: CUSTOS LOG ══════════════ -->
+  <div class="page active" id="page-custos">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Custos Logísticos 2026</div>
+        <div class="page-sub">Jan–Abr/2026 · Realizado</div>
+      </div>
+      <div class="controls">
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="c-btn-mes" onclick="setCustosView('mes')">Mês</button>
+          <button class="toggle-btn" id="c-btn-ytd" onclick="setCustosView('ytd')">YTD</button>
+        </div>
+        <select id="c-sel-mes" onchange="renderCustos()">
+          <option value="all">Todos os meses</option>
+          <option value="0">Janeiro</option>
+          <option value="1">Fevereiro</option>
+          <option value="2">Março</option>
+          <option value="3">Abril</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="c-kpis"></div>
+
+    <div class="grid-2 section-gap">
+      <div class="chart-card">
+        <div class="card-title">Volume Realizado vs Entregue</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#4d7cfe"></div>Realizado</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#38d9a9"></div>Entregue</div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="c-chart-vol"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">Custo Total Realizado (R$)</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#4d7cfe"></div>Fábrica</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#38d9a9"></div>Courier</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#f5a623"></div>Gráfica</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#9b59b6"></div>Dataprep</div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="c-chart-custo"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2 section-gap">
+      <div class="chart-card">
+        <div class="card-title">Custo Unitário Total Entregue (R$/cartão)</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="c-chart-unit"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">Efetividade de Entrega (%)</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="c-chart-efet"></canvas></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="card-title" style="margin-bottom:16px">Breakdown de Custos por Componente</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Mês</th><th>Vol. Realizado</th><th>Vol. Entregue</th>
+            <th>Custo Total</th><th>Fábrica</th><th>Courier</th>
+            <th>Gráfica</th><th>Dataprep</th><th>Unit. Log</th><th>Efetividade</th>
+          </tr>
+        </thead>
+        <tbody id="c-tab"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ PÁGINA 2: EMBOSSING & SLA ══════════════ -->
+  <div class="page" id="page-embossing">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Embossing & SLA de Produção</div>
+        <div class="page-sub">Jan–Mai/2026 · Thales (MEI) + Idemia (PF/Gold)</div>
+      </div>
+      <div class="controls">
+        <select id="e-sel-mes" onchange="renderEmbossing()">
+          <option value="all">Todos os meses</option>
+          <option value="0">Janeiro</option>
+          <option value="1">Fevereiro</option>
+          <option value="2">Março</option>
+          <option value="3">Abril</option>
+          <option value="4">Maio</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="e-kpis"></div>
+
+    <div class="grid-2 section-gap">
+      <div class="chart-card">
+        <div class="card-title">Volume por Fábrica (cartões)</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#4d7cfe"></div>Idemia (PF+Gold)</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#38d9a9"></div>Thales (MEI)</div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="e-chart-fab"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">SLA Idemia — Status de Expedição</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#5cb85c"></div>Antecipado</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#4d7cfe"></div>Dentro do prazo</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#e24b4a"></div>Fora do prazo</div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="e-chart-sla"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2 section-gap">
+      <div class="chart-card">
+        <div class="card-title">Distribuição por Transportadora — Idemia</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#4d7cfe"></div>Mobi</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#f5a623"></div>Flash</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#9b59b6"></div>Total Express</div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="e-chart-trans"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title" id="e-title-emb">Embossing Diário — Meta vs Realizado (Mai/26)</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#4d7cfe"></div>Realizado</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#e24b4a"></div>Meta (10.685/dia)</div>
+        </div>
+        <div class="chart-wrap" style="height:220px; position:relative">
+          <canvas id="e-chart-emb"></canvas>
+          <div id="e-no-emb" class="no-data" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%">
+            Dados diários disponíveis apenas para Mai/26
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card section-gap">
+      <div class="card-title">SLA Thales (MEI)</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#5cb85c"></div>Dentro do prazo</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#e24b4a"></div>Fora do prazo</div>
+      </div>
+      <div class="chart-wrap" style="height:160px"><canvas id="e-chart-thales"></canvas></div>
+    </div>
+
+    <div class="table-card">
+      <div class="card-title" style="margin-bottom:16px">Volume por Fábrica — Detalhamento Mensal</div>
+      <table>
+        <thead><tr id="e-thead-fab"></tr></thead>
+        <tbody id="e-tab-fab"></tbody>
+      </table>
+    </div>
+
+    <div class="table-card">
+      <div class="card-title" style="margin-bottom:6px">Distribuição por Transportadora</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Base: data de expedição · ICOURIER renomeado para Mobi</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Mês</th><th>Total</th>
+            <th>Mobi</th><th>% Mobi</th>
+            <th>Flash</th><th>% Flash</th>
+            <th>Total Express</th><th>% Tx</th>
+          </tr>
+        </thead>
+        <tbody id="e-tab-trans"></tbody>
+      </table>
+    </div>
+
+    <div class="table-card">
+      <div class="card-title" style="margin-bottom:6px">SLA Idemia — Resumo Mensal por Data de Expedição</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Base: data de expedição dos cartões ao cliente</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Mês</th><th>Total expedido</th><th>Antecipado</th>
+            <th>Dentro do prazo</th><th>Fora do prazo</th><th>% no prazo</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="e-tab-sla"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════
+// NAVEGAÇÃO
+// ═══════════════════════════════════════
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.getElementById('nav-' + p).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// DADOS — CUSTOS LOG 2026
+// ═══════════════════════════════════════
+const MESES_C = ['Jan','Fev','Mar','Abr'];
+const dadosCustos = [
+  {vol:277505, ent:225254, custo:3908495, fab:1538473, cou:2207577, gra:102828, dp:59615, unit:17.35, efet:81.17},
+  {vol:229450, ent:232660, custo:3177375, fab:1269864, cou:1761569, gra:87329,  dp:58611, unit:13.66, efet:101.40},
+  {vol:307233, ent:273710, custo:4240373, fab:1700038, cou:2362594, gra:116916, dp:60823, unit:15.49, efet:89.09},
+  {vol:246801, ent:223780, custo:3355803, fab:1365890, cou:1840757, gra:93930,  dp:55224, unit:15.00, efet:90.67},
+];
+
+let custosView = 'mes';
+let chartsC = {};
+
+function setCustosView(v) {
+  custosView = v;
+  document.getElementById('c-btn-mes').classList.toggle('active', v === 'mes');
+  document.getElementById('c-btn-ytd').classList.toggle('active', v === 'ytd');
+  document.getElementById('c-sel-mes').disabled = v === 'ytd';
+  renderCustos();
+}
+
+function getCIdxs() {
+  if (custosView === 'ytd') return [0,1,2,3];
+  const v = document.getElementById('c-sel-mes').value;
+  return v === 'all' ? [0,1,2,3] : [parseInt(v)];
+}
+
+function aggC(idxs) {
+  let vol=0,ent=0,custo=0,fab=0,cou=0,gra=0,dp=0;
+  idxs.forEach(i => {
+    vol+=dadosCustos[i].vol; ent+=dadosCustos[i].ent; custo+=dadosCustos[i].custo;
+    fab+=dadosCustos[i].fab; cou+=dadosCustos[i].cou; gra+=dadosCustos[i].gra; dp+=dadosCustos[i].dp;
+  });
+  return {vol, ent, custo, fab, cou, gra, dp, unit: custo/ent, efet: ent/vol*100};
+}
+
+function renderCustos() {
+  const idxs = getCIdxs();
+  const a = aggC(idxs);
+  const single = idxs.length === 1;
+  const labels = idxs.map(i => MESES_C[i]);
+
+  // KPIs
+  const efCls = a.efet >= 95 ? 'kpi-ok' : a.efet >= 85 ? 'kpi-warn' : 'kpi-danger';
+  document.getElementById('c-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Volume Realizado</div><div class="kpi-value">${fmtN(a.vol)}</div><div class="kpi-sub">cartões</div></div>
+    <div class="kpi-card"><div class="kpi-label">Custo Total</div><div class="kpi-value" style="font-size:19px">${fmtR(a.custo)}</div><div class="kpi-sub">realizado</div></div>
+    <div class="kpi-card"><div class="kpi-label">Unit. Log Entregue</div><div class="kpi-value">${fmtRd(a.unit)}</div><div class="kpi-sub">R$/cartão</div></div>
+    <div class="kpi-card"><div class="kpi-label">Efetividade</div><div class="kpi-value ${efCls}">${a.efet.toFixed(2).replace('.',',')}%</div><div class="kpi-sub">entregas / realizados</div></div>
+    <div class="kpi-card"><div class="kpi-label">Volume Entregue</div><div class="kpi-value">${fmtN(a.ent)}</div><div class="kpi-sub">cartões</div></div>
+  `;
+
+  // Tabela
+  let html = '';
+  idxs.forEach(i => {
+    const d = dadosCustos[i];
+    const ef = d.efet >= 95 ? 'color:var(--ok)' : d.efet >= 85 ? 'color:var(--warn)' : 'color:var(--danger)';
+    html += `<tr>
+      <td>${MESES_C[i]}/26</td><td>${fmtN(d.vol)}</td><td>${fmtN(d.ent)}</td>
+      <td><strong>${fmtR(d.custo)}</strong></td>
+      <td>${fmtR(d.fab)}</td><td>${fmtR(d.cou)}</td><td>${fmtR(d.gra)}</td><td>${fmtR(d.dp)}</td>
+      <td>${fmtRd(d.unit)}</td><td style="${ef};font-weight:600">${d.efet.toFixed(2).replace('.',',')}%</td>
+    </tr>`;
+  });
+  if (!single) {
+    html += `<tr class="row-total">
+      <td>YTD</td><td>${fmtN(a.vol)}</td><td>${fmtN(a.ent)}</td>
+      <td>${fmtR(a.custo)}</td><td>${fmtR(a.fab)}</td><td>${fmtR(a.cou)}</td>
+      <td>${fmtR(a.gra)}</td><td>${fmtR(a.dp)}</td>
+      <td>${fmtRd(a.unit)}</td><td>${a.efet.toFixed(2).replace('.',',')}%</td>
+    </tr>`;
+  }
+  document.getElementById('c-tab').innerHTML = html;
+
+  // Gráficos
+  ['vol','custo','unit','efet'].forEach(k => { if (chartsC[k]) chartsC[k].destroy(); });
+
+  const co = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:{grid:{display:false}, ticks:{color:'#7a8099',font:{family:'DM Sans'}}},
+             y:{grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#7a8099',font:{family:'DM Sans'}}} } };
+
+  if (single) {
+    const i = idxs[0];
+    chartsC.vol = new Chart(document.getElementById('c-chart-vol'), {
+      type:'doughnut',
+      data:{labels:['Realizado','Entregue'],datasets:[{data:[dadosCustos[i].vol,dadosCustos[i].ent],backgroundColor:['#4d7cfe','#38d9a9'],borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7a8099',font:{family:'DM Sans',size:12},padding:16}}},cutout:'65%'}
+    });
+    chartsC.custo = new Chart(document.getElementById('c-chart-custo'), {
+      type:'doughnut',
+      data:{labels:['Fábrica','Courier','Gráfica','Dataprep'],datasets:[{data:[dadosCustos[i].fab,dadosCustos[i].cou,dadosCustos[i].gra,dadosCustos[i].dp],backgroundColor:['#4d7cfe','#38d9a9','#f5a623','#9b59b6'],borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7a8099',font:{family:'DM Sans',size:12},padding:16}}},cutout:'65%'}
+    });
+  } else {
+    chartsC.vol = new Chart(document.getElementById('c-chart-vol'), {
+      type:'bar', data:{labels,datasets:[
+        {label:'Realizado',data:idxs.map(i=>dadosCustos[i].vol),backgroundColor:'#4d7cfe',borderRadius:5},
+        {label:'Entregue', data:idxs.map(i=>dadosCustos[i].ent),backgroundColor:'#38d9a9',borderRadius:5}
+      ]}, options:{...co, scales:{...co.scales, y:{...co.scales.y, ticks:{...co.scales.y.ticks, callback:v=>v>=1000?Math.round(v/1000)+'k':v}}}}
+    });
+    chartsC.custo = new Chart(document.getElementById('c-chart-custo'), {
+      type:'bar', data:{labels,datasets:[
+        {label:'Fábrica', data:idxs.map(i=>dadosCustos[i].fab), backgroundColor:'#4d7cfe',borderRadius:3},
+        {label:'Courier', data:idxs.map(i=>dadosCustos[i].cou), backgroundColor:'#38d9a9',borderRadius:3},
+        {label:'Gráfica', data:idxs.map(i=>dadosCustos[i].gra), backgroundColor:'#f5a623',borderRadius:3},
+        {label:'Dataprep',data:idxs.map(i=>dadosCustos[i].dp),  backgroundColor:'#9b59b6',borderRadius:3},
+      ]}, options:{...co, scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#7a8099',font:{family:'DM Sans'}}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7a8099',callback:v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1000?'R$'+Math.round(v/1000)+'k':'R$'+v,font:{family:'DM Mono'}}}}}
+    });
+  }
+
+  chartsC.unit = new Chart(document.getElementById('c-chart-unit'), {
+    type: single ? 'bar' : 'line',
+    data:{labels,datasets:[{label:'Unit.',data:idxs.map(i=>dadosCustos[i].unit),
+      borderColor:'#4d7cfe',backgroundColor: single?'#4d7cfe':'rgba(77,124,254,0.12)',
+      borderWidth:2,pointRadius:4,pointBackgroundColor:'#4d7cfe',fill:!single,tension:0.35,borderRadius:single?6:undefined}]},
+    options:{...co, scales:{...co.scales, y:{...co.scales.y, ticks:{...co.scales.y.ticks, callback:v=>'R$'+v.toFixed(2).replace('.',',')}}}}
+  });
+
+  chartsC.efet = new Chart(document.getElementById('c-chart-efet'), {
+    type: single ? 'bar' : 'line',
+    data:{labels,datasets:[
+      {label:'Efet.',data:idxs.map(i=>dadosCustos[i].efet),
+        borderColor:'#38d9a9',backgroundColor: single?'#38d9a9':'rgba(56,217,169,0.12)',
+        borderWidth:2,pointRadius:4,pointBackgroundColor:'#38d9a9',fill:!single,tension:0.35,borderRadius:single?6:undefined},
+      ...(single?[]:[{label:'Meta 95%',data:idxs.map(()=>95),borderColor:'#e24b4a',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false,type:'line'}])
+    ]},
+    options:{...co, scales:{...co.scales, y:{...co.scales.y, min:75, ticks:{...co.scales.y.ticks, callback:v=>v+'%'}}}}
+  });
+}
+
+// ═══════════════════════════════════════
+// DADOS — EMBOSSING & SLA
+// ═══════════════════════════════════════
+const MESES_E = ['Jan','Fev','Mar','Abr','Mai'];
+
+const idemia = [
+  {total:276598, ant:106460, den:129866, for_:40272},
+  {total:228496, ant:28339,  den:171331, for_:28826},
+  {total:306072, ant:84546,  den:111949, for_:109577},
+  {total:245793, ant:115108, den:97727,  for_:32958},
+  {total:200911, ant:103989, den:82138,  for_:14784},
+];
+const thales = [
+  {total:5043, den:5043, for_:0},
+  {total:954,  den:954,  for_:0},
+  {total:1161, den:1161, for_:0},
+  {total:1008, den:1008, for_:0},
+  {total:1013, den:1013, for_:0},
+];
+const trans = [
+  {mobi:230246, flash:46340, te:12},
+  {mobi:187854, flash:40629, te:13},
+  {mobi:251693, flash:54352, te:27},
+  {mobi:195722, flash:43863, te:6208},
+  {mobi:159901, flash:35262, te:5748},
+];
+const volFab = [
+  {biorc:252744, gold:23851},
+  {biorc:208000, gold:20489},
+  {biorc:275206, gold:30857},
+  {biorc:225326, gold:20460},
+  {biorc:185312, gold:15557},
+];
+const embDiario = [
+  {d:'01/05',v:19576},{d:'03/05',v:26464},{d:'04/05',v:16398},{d:'05/05',v:19326},
+  {d:'06/05',v:16714},{d:'07/05',v:18982},{d:'08/05',v:15892},{d:'10/05',v:22390},
+  {d:'11/05',v:14624},{d:'12/05',v:17716},{d:'13/05',v:15922},{d:'14/05',v:15956},
+  {d:'15/05',v:16610},{d:'17/05',v:25200},{d:'18/05',v:16714},{d:'19/05',v:15870},
+  {d:'20/05',v:18242},{d:'21/05',v:17122},{d:'22/05',v:14678},{d:'24/05',v:24184},
+  {d:'25/05',v:14616}
+];
+const META_DIA = 10685;
+
+let chartsE = {};
+
+function getEIdxs() {
+  const v = document.getElementById('e-sel-mes').value;
+  return v === 'all' ? [0,1,2,3,4] : [parseInt(v)];
+}
+
+function renderEmbossing() {
+  const idxs = getEIdxs();
+  const single = idxs.length === 1;
+  const labels = idxs.map(i => MESES_E[i]);
+
+  // KPIs
+  let totI=0, totT=0, ant=0, den=0, for_=0, tMobi=0;
+  idxs.forEach(i => {
+    totI+=idemia[i].total; totT+=thales[i].total;
+    ant+=idemia[i].ant; den+=idemia[i].den; for_+=idemia[i].for_;
+    tMobi+=trans[i].mobi;
+  });
+  const tot = totI + totT;
+  const pp = Math.round((ant+den)/totI*100);
+  const ppCls = pp >= 90 ? 'kpi-ok' : pp >= 80 ? 'kpi-warn' : 'kpi-danger';
+  document.getElementById('e-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Expedido</div><div class="kpi-value">${fmtN(tot)}</div><div class="kpi-sub">Idemia + Thales</div></div>
+    <div class="kpi-card"><div class="kpi-label">Idemia (PF + Gold)</div><div class="kpi-value">${fmtN(totI)}</div><div class="kpi-sub">${Math.round(totI/tot*100)}% do total</div></div>
+    <div class="kpi-card"><div class="kpi-label">Thales (MEI)</div><div class="kpi-value">${fmtN(totT)}</div><div class="kpi-sub">${Math.round(totT/tot*100)}% do total</div></div>
+    <div class="kpi-card"><div class="kpi-label">SLA Idemia no Prazo</div><div class="kpi-value ${ppCls}">${pp}%</div><div class="kpi-sub">antecipado + dentro</div></div>
+    <div class="kpi-card"><div class="kpi-label">Fora do Prazo</div><div class="kpi-value kpi-danger">${fmtN(for_)}</div><div class="kpi-sub">${Math.round(for_/totI*100)}% Idemia</div></div>
+    <div class="kpi-card"><div class="kpi-label">Mobi (principal)</div><div class="kpi-value">${Math.round(tMobi/totI*100)}%</div><div class="kpi-sub">${fmtN(tMobi)} cartões</div></div>
+  `;
+
+  // Tabela fábricas
+  const fabRows = [
+    {fab:'Idemia',prod:'PF (BIORC)',cor:'#4d7cfe',vals:volFab.map(d=>d.biorc)},
+    {fab:'Idemia',prod:'Gold (PF)', cor:'#4d7cfe',vals:volFab.map(d=>d.gold)},
+    {fab:'Thales', prod:'MEI',      cor:'#38d9a9',vals:thales.map(d=>d.total)},
+  ];
+  const gTot = fabRows.reduce((s,r)=>s+idxs.reduce((a,i)=>a+r.vals[i],0),0);
+  let thead = '<th>Fábrica</th><th>Produto</th>';
+  if (!single) labels.forEach(l => thead += `<th>${l}</th>`);
+  thead += '<th>Total</th>';
+  if (!single) thead += '<th>Part.</th>';
+  document.getElementById('e-thead-fab').innerHTML = thead;
+
+  let fabHtml = '';
+  fabRows.forEach(r => {
+    const ytd = idxs.reduce((a,i)=>a+r.vals[i],0);
+    const pt = Math.round(ytd/gTot*100);
+    fabHtml += `<tr><td>${r.fab}</td><td>${r.prod}</td>`;
+    if (!single) idxs.forEach(i => { fabHtml += `<td>${fmtN(r.vals[i])}</td>`; });
+    fabHtml += `<td><strong>${fmtN(ytd)}</strong></td>`;
+    if (!single) fabHtml += `<td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,pt*2)}%;background:${r.cor}"></div></div><span class="prog-label">${pt}%</span></div></td>`;
+    fabHtml += `</tr>`;
+  });
+  document.getElementById('e-tab-fab').innerHTML = fabHtml;
+
+  // Tabela transportadoras
+  let transHtml = '';
+  idxs.forEach(i => {
+    const d = trans[i]; const t = d.mobi+d.flash+d.te;
+    transHtml += `<tr>
+      <td>${MESES_E[i]}/26</td><td>${fmtN(t)}</td>
+      <td>${fmtN(d.mobi)}</td><td style="color:#4d7cfe;font-weight:600">${pct(d.mobi,t)}</td>
+      <td>${fmtN(d.flash)}</td><td style="color:#f5a623;font-weight:600">${pct(d.flash,t)}</td>
+      <td>${fmtN(d.te)}</td><td style="color:#9b59b6;font-weight:600">${pct(d.te,t)}</td>
+    </tr>`;
+  });
+  if (!single) {
+    const yt={mobi:0,flash:0,te:0};
+    idxs.forEach(i=>{yt.mobi+=trans[i].mobi;yt.flash+=trans[i].flash;yt.te+=trans[i].te});
+    const t=yt.mobi+yt.flash+yt.te;
+    transHtml+=`<tr class="row-total">
+      <td>Total</td><td>${fmtN(t)}</td>
+      <td>${fmtN(yt.mobi)}</td><td style="color:#4d7cfe">${pct(yt.mobi,t)}</td>
+      <td>${fmtN(yt.flash)}</td><td style="color:#f5a623">${pct(yt.flash,t)}</td>
+      <td>${fmtN(yt.te)}</td><td style="color:#9b59b6">${pct(yt.te,t)}</td>
+    </tr>`;
+  }
+  document.getElementById('e-tab-trans').innerHTML = transHtml;
+
+  // Tabela SLA
+  let slaHtml = '';
+  idxs.forEach(i => {
+    const d = idemia[i];
+    const p = Math.round((d.ant+d.den)/d.total*100);
+    const bc = p>=90?'badge-ok':p>=80?'badge-warn':'badge-bad';
+    slaHtml += `<tr>
+      <td>${MESES_E[i]}/26</td><td>${fmtN(d.total)}</td>
+      <td>${fmtN(d.ant)}</td><td>${fmtN(d.den)}</td><td>${fmtN(d.for_)}</td>
+      <td>${p}%</td>
+      <td><span class="badge ${bc}">${p>=90?'Ótimo':p>=80?'Regular':'Atenção'}</span></td>
+    </tr>`;
+  });
+  document.getElementById('e-tab-sla').innerHTML = slaHtml;
+
+  // Gráficos
+  ['fab','sla','trans','emb','thales'].forEach(k=>{if(chartsE[k])chartsE[k].destroy();});
+
+  const co = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:{grid:{display:false},ticks:{color:'#7a8099',font:{family:'DM Sans'}}},
+             y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7a8099',font:{family:'DM Sans'}}} } };
+  const doOpts = (pos='bottom') => ({responsive:true,maintainAspectRatio:false,cutout:'65%',
+    plugins:{legend:{position:pos,labels:{color:'#7a8099',font:{family:'DM Sans',size:12},padding:16}}}});
+
+  // Fábrica
+  if (single) {
+    const i=idxs[0];
+    chartsE.fab = new Chart(document.getElementById('e-chart-fab'),{type:'doughnut',
+      data:{labels:['PF (BIORC)','Gold (PF)','Thales (MEI)'],
+        datasets:[{data:[volFab[i].biorc,volFab[i].gold,thales[i].total],backgroundColor:['#4d7cfe','#5b8ffd','#38d9a9'],borderWidth:0,hoverOffset:6}]},
+      options:doOpts()});
+  } else {
+    chartsE.fab = new Chart(document.getElementById('e-chart-fab'),{type:'bar',
+      data:{labels,datasets:[
+        {label:'Idemia',data:idxs.map(i=>idemia[i].total),backgroundColor:'#4d7cfe',borderRadius:5},
+        {label:'Thales',data:idxs.map(i=>thales[i].total),backgroundColor:'#38d9a9',borderRadius:5}
+      ]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v>=1000?Math.round(v/1000)+'k':v}}}}});
+  }
+
+  // SLA Idemia
+  if (single) {
+    const i=idxs[0];
+    chartsE.sla = new Chart(document.getElementById('e-chart-sla'),{type:'doughnut',
+      data:{labels:['Antecipado','Dentro do prazo','Fora do prazo'],
+        datasets:[{data:[idemia[i].ant,idemia[i].den,idemia[i].for_],backgroundColor:['#5cb85c','#4d7cfe','#e24b4a'],borderWidth:0,hoverOffset:6}]},
+      options:doOpts()});
+  } else {
+    chartsE.sla = new Chart(document.getElementById('e-chart-sla'),{type:'bar',
+      data:{labels,datasets:[
+        {label:'Antecipado',data:idxs.map(i=>idemia[i].ant),backgroundColor:'#5cb85c',borderRadius:2},
+        {label:'Dentro',    data:idxs.map(i=>idemia[i].den),backgroundColor:'#4d7cfe',borderRadius:2},
+        {label:'Fora',      data:idxs.map(i=>idemia[i].for_),backgroundColor:'#e24b4a',borderRadius:2},
+      ]},options:{...co,scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#7a8099'}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7a8099',callback:v=>v>=1000?Math.round(v/1000)+'k':v}}}}});
+  }
+
+  // Transportadora
+  if (single) {
+    const i=idxs[0];
+    chartsE.trans = new Chart(document.getElementById('e-chart-trans'),{type:'doughnut',
+      data:{labels:['Mobi','Flash','Total Express'],
+        datasets:[{data:[trans[i].mobi,trans[i].flash,trans[i].te],backgroundColor:['#4d7cfe','#f5a623','#9b59b6'],borderWidth:0,hoverOffset:6}]},
+      options:doOpts()});
+  } else {
+    chartsE.trans = new Chart(document.getElementById('e-chart-trans'),{type:'bar',
+      data:{labels,datasets:[
+        {label:'Mobi',         data:idxs.map(i=>trans[i].mobi), backgroundColor:'#4d7cfe',borderRadius:2},
+        {label:'Flash',        data:idxs.map(i=>trans[i].flash),backgroundColor:'#f5a623',borderRadius:2},
+        {label:'Total Express',data:idxs.map(i=>trans[i].te),   backgroundColor:'#9b59b6',borderRadius:2},
+      ]},options:{...co,scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#7a8099'}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7a8099',callback:v=>v>=1000?Math.round(v/1000)+'k':v}}}}});
+  }
+
+  // Embossing diário
+  const canvas = document.getElementById('e-chart-emb');
+  const noData = document.getElementById('e-no-emb');
+  const titleEmb = document.getElementById('e-title-emb');
+  if (single && idxs[0] !== 4) {
+    canvas.style.display = 'none'; noData.style.display = 'flex';
+    titleEmb.textContent = 'Embossing Diário — Meta vs Realizado';
+  } else {
+    canvas.style.display = 'block'; noData.style.display = 'none';
+    titleEmb.textContent = 'Embossing Diário — Meta vs Realizado (Mai/26)';
+    chartsE.emb = new Chart(canvas,{type:'bar',
+      data:{labels:embDiario.map(d=>d.d),datasets:[
+        {label:'Realizado',data:embDiario.map(d=>d.v),backgroundColor:'#4d7cfe',borderRadius:3},
+        {label:'Meta',data:embDiario.map(()=>META_DIA),type:'line',borderColor:'#e24b4a',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false}
+      ]},options:{...co,scales:{...co.scales,x:{...co.scales.x,ticks:{...co.scales.x.ticks,maxRotation:45,font:{size:10,family:'DM Mono'}}},y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v>=1000?Math.round(v/1000)+'k':v}}}}});
+  }
+
+  // Thales
+  if (single) {
+    const i=idxs[0];
+    chartsE.thales = new Chart(document.getElementById('e-chart-thales'),{type:'doughnut',
+      data:{labels:['Dentro do prazo','Fora do prazo'],
+        datasets:[{data:[thales[i].den,thales[i].for_],backgroundColor:['#5cb85c','#e24b4a'],borderWidth:0,hoverOffset:6}]},
+      options:doOpts('right')});
+  } else {
+    chartsE.thales = new Chart(document.getElementById('e-chart-thales'),{type:'bar',
+      data:{labels,datasets:[
+        {label:'Dentro',data:idxs.map(i=>thales[i].den), backgroundColor:'#5cb85c',borderRadius:4},
+        {label:'Fora',  data:idxs.map(i=>thales[i].for_),backgroundColor:'#e24b4a',borderRadius:4},
+      ]},options:{...co,scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#7a8099'}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7a8099'}}}}});
+  }
+}
+
+// ═══════════════════════════════════════
+// HELPERS DE FORMATAÇÃO
+// ═══════════════════════════════════════
+const fmtN  = n => n.toLocaleString('pt-BR');
+const fmtR  = n => 'R$' + n.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtRd = n => 'R$' + n.toFixed(2).replace('.',',');
+const pct   = (a,t) => t > 0 ? (a/t*100).toFixed(1)+'%' : '—';
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+renderCustos();
+renderEmbossing();
+</script>
+</body>
+</html>
