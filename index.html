@@ -111,7 +111,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
 <!-- PAGINA 1: CUSTOS -->
 <div class="page active" id="page-custos">
   <div class="page-header">
-    <div><div class="page-title">Custos Logisticos 2026</div><div class="page-sub">Jan-Abr/2026 - Realizado</div></div>
+    <div><div class="page-title">Custos Logisticos 2026</div><div class="page-sub">Jan-Mai/2026 - Realizado</div></div>
     <div class="controls">
       <div class="toggle-group">
         <button class="toggle-btn active" id="c-btn-mes" onclick="setCustosView('mes')">Mes</button>
@@ -121,6 +121,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
         <option value="all">Todos os meses</option>
         <option value="0">Janeiro</option><option value="1">Fevereiro</option>
         <option value="2">Marco</option><option value="3">Abril</option>
+        <option value="4">Maio</option>
       </select>
       <button class="btn-refresh" onclick="renderCustos()">&#8635; Atualizar</button>
     </div>
@@ -387,7 +388,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
 // CONFIGURACAO - Cole aqui a URL gerada pelo Apps Script
 // Exemplo: 'https://script.google.com/macros/s/AKfy.../exec'
 // ============================================================
-var APPS_SCRIPT_URL = 'https://script.google.com/a/macros/neon.com.br/s/AKfycbwSrIbzADh-ztTTPFoTEluKrAoHp_Llr1Izmg8toN0ZVv8pVBxHMK5s_stpww0uWNi1/exec';
+var APPS_SCRIPT_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
 
 function showPage(p) {
   document.querySelectorAll('.page').forEach(function(el){el.classList.remove('active');});
@@ -399,11 +400,12 @@ function showPage(p) {
 // ── Carrega dados ao vivo do Apps Script (se configurado) ──
 function carregarDadosLive(callback) {
   if (APPS_SCRIPT_URL === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT') {
-    // Sem URL configurada - usa dados estaticos
     document.getElementById('ultima-atualizacao').textContent = 'Dados estaticos';
     if (callback) callback(null);
     return;
   }
+
+  document.getElementById('ultima-atualizacao').textContent = 'Carregando...';
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', APPS_SCRIPT_URL, true);
@@ -412,20 +414,66 @@ function carregarDadosLive(callback) {
       try {
         var json = JSON.parse(xhr.responseText);
         if (json && !json.erro) {
-          // Atualizar dados de custodia se vieram
+
+          // ── CUSTOS: atualizar DC com dados ao vivo ──────────────────────
+          if (json.custos && json.custos.meses && json.custos.meses.length > 0) {
+            var c = json.custos;
+            DC.meses   = c.meses;
+            DC.volReal = c.volRealizado;
+            DC.volEnt  = c.volEntregue;
+            DC.custo   = c.custoTotal;
+            DC.fabrica = c.fabrica;
+            DC.courier = c.courier;
+            DC.grafica = c.grafica;
+            DC.dataprep= c.dataprep;
+            DC.unit    = c.unitLog;
+            DC.efet    = c.efetividade;
+
+            // Atualizar select de meses de custos dinamicamente
+            var sel = document.getElementById('c-sel-mes');
+            if (sel) {
+              var MESES_LABEL = {
+                'Jan':'Janeiro','Fev':'Fevereiro','Mar':'Marco','Abr':'Abril',
+                'Mai':'Maio','Jun':'Junho','Jul':'Julho','Ago':'Agosto',
+                'Set':'Setembro','Out':'Outubro','Nov':'Novembro','Dez':'Dezembro'
+              };
+              // Manter só a opção "Todos os meses" e reconstruir o resto
+              while (sel.options.length > 1) sel.remove(1);
+              c.meses.forEach(function(m, i) {
+                var opt = document.createElement('option');
+                opt.value = i;
+                opt.text  = MESES_LABEL[m] || m;
+                sel.add(opt);
+              });
+            }
+
+            // Atualizar subtítulo
+            var sub = document.querySelector('#page-custos .page-sub');
+            if (sub && c.meses.length > 0) {
+              sub.textContent = c.meses[0] + '-' + c.meses[c.meses.length-1] + '/2026 - Realizado';
+            }
+          }
+
+          // ── CUSTÓDIA ────────────────────────────────────────────────────
           if (json.custodia) { DC_CUST = json.custodia; }
+
           var agora = new Date();
           document.getElementById('ultima-atualizacao').textContent =
-            'Atualizado ' + agora.getHours() + ':' + ('0'+agora.getMinutes()).slice(-2);
+            'Atualizado ' + ('0'+agora.getHours()).slice(-2) + ':' + ('0'+agora.getMinutes()).slice(-2);
+        } else {
+          document.getElementById('ultima-atualizacao').textContent = 'Dados estaticos';
+          console.warn('Apps Script retornou erro:', json && json.erro);
         }
       } catch(e) {
+        document.getElementById('ultima-atualizacao').textContent = 'Dados estaticos';
         console.warn('Erro ao parsear resposta do Apps Script:', e);
       }
     }
     if (callback) callback(null);
   };
   xhr.onerror = function() {
-    console.warn('Apps Script inacessivel, usando dados estaticos.');
+    document.getElementById('ultima-atualizacao').textContent = 'Dados estaticos';
+    console.warn('Apps Script inacessivel.');
     if (callback) callback(null);
   };
   xhr.send();
@@ -433,16 +481,16 @@ function carregarDadosLive(callback) {
 
 // ── DADOS ──
 var DC = {
-  meses: ['Jan','Fev','Mar','Abr'],
-  volReal:  [277505,229450,307233,246801],
-  volEnt:   [225254,232660,273710,223780],
-  custo:    [3908495,3177375,4240373,3355803],
-  fabrica:  [1538473,1269864,1700038,1365890],
-  courier:  [2207577,1761569,2362594,1840757],
-  grafica:  [102828,87329,116916,93930],
-  dataprep: [59615,58611,60823,55224],
-  unit:     [17.35,13.66,15.49,15.00],
-  efet:     [81.17,101.40,89.09,90.67]
+  meses: ['Jan','Fev','Mar','Abr','Mai'],
+  volReal:  [277505,229450,307233,246801,232979],
+  volEnt:   [225254,232660,273710,223780,211059],
+  custo:    [3908495,3177375,4240373,3355803,3153503],
+  fabrica:  [1538473,1269864,1700038,1365890,1290218],
+  courier:  [2207577,1761569,2362594,1840757,1717460],
+  grafica:  [102828,87329,116916,93930,88705],
+  dataprep: [59615,58611,60823,55224,57117],
+  unit:     [17.35,13.66,15.49,15.00,13.54],
+  efet:     [81.17,101.40,89.09,90.67,90.59]
 };
 
 var DE = {
