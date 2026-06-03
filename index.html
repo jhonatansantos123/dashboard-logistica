@@ -454,6 +454,35 @@ function carregarDadosLive(callback) {
             }
           }
 
+          // ── EMBOSSING ───────────────────────────────────────────────────
+          if (json.embossing) {
+            var e = json.embossing;
+            if (e.embDia   && e.embDia.length > 0) DE.embDia       = e.embDia;
+            if (e.metaDia  && e.metaDia  > 0)      DE.metaDia      = e.metaDia;
+            if (e.metaMes  && e.metaMes  > 0)      DE.metaMes      = e.metaMes;
+            if (e.realizadoMes !== undefined)       DE.realizadoMes = e.realizadoMes;
+            if (e.pctMeta  !== undefined)           DE.pctMeta      = e.pctMeta;
+            if (e.mesAtual)                         DE.mesAtual     = e.mesAtual;
+            // SLA mensal histórico (idemia/thales por mês)
+            if (e.meses && e.meses.length > 0) {
+              // Reconstruir arrays DE.idemia, DE.thales, DE.meses, DE.volFab, DE.trans
+              // a partir dos dados ao vivo
+              // (mantém fallback estático se não vier)
+            }
+          }
+
+          // ── SLA ─────────────────────────────────────────────────────────
+          if (json.sla) {
+            var s = json.sla;
+            if (s.idemia && s.idemia.length > 0) {
+              DE.meses  = s.idemia.map(function(m){ return m.mes; });
+              DE.idemia = s.idemia.map(function(m){ return {total:m.total,ant:m.ant,den:m.den,fora:m.fora}; });
+            }
+            if (s.thales && s.thales.length > 0) {
+              DE.thales = s.thales.map(function(m){ return {total:m.total,den:m.den,fora:m.fora}; });
+            }
+          }
+
           // ── CUSTÓDIA ────────────────────────────────────────────────────
           if (json.custodia) { DC_CUST = json.custodia; }
 
@@ -523,15 +552,12 @@ var DE = {
     {biorc:225326,gold:20460},
     {biorc:185312,gold:15557}
   ],
-  embDia: [
-    {d:'01/05',v:19576},{d:'03/05',v:26464},{d:'04/05',v:16398},{d:'05/05',v:19326},
-    {d:'06/05',v:16714},{d:'07/05',v:18982},{d:'08/05',v:15892},{d:'10/05',v:22390},
-    {d:'11/05',v:14624},{d:'12/05',v:17716},{d:'13/05',v:15922},{d:'14/05',v:15956},
-    {d:'15/05',v:16610},{d:'17/05',v:25200},{d:'18/05',v:16714},{d:'19/05',v:15870},
-    {d:'20/05',v:18242},{d:'21/05',v:17122},{d:'22/05',v:14678},{d:'24/05',v:24184},
-    {d:'25/05',v:14616}
-  ],
-  metaDia: 10685
+  embDia:       [{d:'01/06',v:21516},{d:'02/06',v:19140}],
+  metaDia:      10585,
+  metaMes:      285800,
+  realizadoMes: 40656,
+  pctMeta:      14.23,
+  mesAtual:     'Jun/2026'
 };
 
 var DEST = {
@@ -726,21 +752,25 @@ function renderEmbossing() {
 
   var totI=0,totT=0,ant=0,den=0,fora=0,tMobi=0;
   idxs.forEach(function(i) {
+    if (!DE.idemia[i] || !DE.thales[i] || !DE.trans[i]) return;
     totI  += DE.idemia[i].total;  totT  += DE.thales[i].total;
     ant   += DE.idemia[i].ant;    den   += DE.idemia[i].den;
     fora  += DE.idemia[i].fora;   tMobi += DE.trans[i].mobi;
   });
   var tot = totI + totT;
-  var pp = Math.round((ant+den)/totI*100);
+  var pp = totI > 0 ? Math.round((ant+den)/totI*100) : 0;
   var ppCls = pp >= 90 ? 'kpi-ok' : pp >= 80 ? 'kpi-warn' : 'kpi-danger';
 
+  // KPI de meta/realizado do mês atual (embossing diário)
+  var pctCls = DE.pctMeta >= 90 ? 'kpi-ok' : DE.pctMeta >= 70 ? 'kpi-warn' : 'kpi-danger';
+
   document.getElementById('e-kpis').innerHTML =
-    '<div class="kpi-card"><div class="kpi-label">Total Expedido</div><div class="kpi-value">' + fmtN(tot) + '</div><div class="kpi-sub">Idemia + Thales</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Idemia (PF+Gold)</div><div class="kpi-value">' + fmtN(totI) + '</div><div class="kpi-sub">' + Math.round(totI/tot*100) + '% do total</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Thales (MEI)</div><div class="kpi-value">' + fmtN(totT) + '</div><div class="kpi-sub">' + Math.round(totT/tot*100) + '% do total</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Realizado ' + (DE.mesAtual||'Mês') + '</div><div class="kpi-value">' + fmtN(DE.realizadoMes) + '</div><div class="kpi-sub">cartoes embossados</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Meta Período</div><div class="kpi-value">' + fmtN(DE.metaMes) + '</div><div class="kpi-sub">meta do mês</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">% vs Meta</div><div class="kpi-value ' + pctCls + '">' + DE.pctMeta + '%</div><div class="kpi-sub">realizado / meta</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">SLA no Prazo</div><div class="kpi-value ' + ppCls + '">' + pp + '%</div><div class="kpi-sub">antecipado + dentro</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Fora do Prazo</div><div class="kpi-value kpi-danger">' + fmtN(fora) + '</div><div class="kpi-sub">' + Math.round(fora/totI*100) + '% Idemia</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Mobi</div><div class="kpi-value">' + Math.round(tMobi/totI*100) + '%</div><div class="kpi-sub">' + fmtN(tMobi) + ' cartoes</div></div>';
+    '<div class="kpi-card"><div class="kpi-label">Fora do Prazo</div><div class="kpi-value kpi-danger">' + fmtN(fora) + '</div><div class="kpi-sub">' + (totI > 0 ? Math.round(fora/totI*100) : 0) + '% Idemia</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Meta Dia</div><div class="kpi-value">' + fmtN(DE.metaDia) + '</div><div class="kpi-sub">cartoes/dia</div></div>';
 
   // Tabela fabrica
   var fabRows = [
