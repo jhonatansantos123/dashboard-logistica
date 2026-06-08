@@ -169,12 +169,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
 <!-- PAGINA 2: EMBOSSING & SLA -->
 <div class="page" id="page-embossing">
   <div class="page-header">
-    <div><div class="page-title">Embossing &amp; SLA de Producao</div><div class="page-sub">Jan-Mai/2026 - Thales (MEI) + Idemia (PF/Gold)</div></div>
+    <div><div class="page-title">Embossing &amp; SLA de Producao</div><div class="page-sub">Jan-Jun/2026 - Thales (MEI) + Idemia (PF/Gold)</div></div>
     <div class="controls">
       <select id="e-sel-mes" onchange="renderEmbossing()">
         <option value="all">Todos os meses</option>
         <option value="0">Janeiro</option><option value="1">Fevereiro</option>
         <option value="2">Marco</option><option value="3">Abril</option><option value="4">Maio</option>
+        <option value="5">Junho</option>
       </select>
       <button class="btn-refresh" onclick="renderEmbossing()">&#8635; Atualizar</button>
     </div>
@@ -388,7 +389,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
 // CONFIGURACAO - Cole aqui a URL gerada pelo Apps Script
 // Exemplo: 'https://script.google.com/macros/s/AKfy.../exec'
 // ============================================================
-var APPS_SCRIPT_URL = 'https://script.google.com/a/macros/neon.com.br/s/AKfycbzSh9fF2Re7uqSH1f-2TgJiseUohR7Phmpum9xBuKHyGDYXvdfX50JKc2Mrpx7b4yjy/exec';
+var APPS_SCRIPT_URL = 'https://script.google.com/a/macros/neon.com.br/s/AKfycbx7VoqJsNW1dTohzOsOaxtJR_DxOFRn7poQWt8r5GdFGYlI5YQ7sOPVtto3qoPcwq-B/exec';
 
 function showPage(p) {
   document.querySelectorAll('.page').forEach(function(el){el.classList.remove('active');});
@@ -399,7 +400,7 @@ function showPage(p) {
 
 // ── Carrega dados ao vivo do Apps Script (se configurado) ──
 function carregarDadosLive(callback) {
-  if (APPS_SCRIPT_URL === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT') {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/a/macros/neon.com.br/s/AKfycbx7VoqJsNW1dTohzOsOaxtJR_DxOFRn7poQWt8r5GdFGYlI5YQ7sOPVtto3qoPcwq-B/exec') {
     document.getElementById('ultima-atualizacao').textContent = 'Dados estaticos';
     if (callback) callback(null);
     return;
@@ -457,18 +458,18 @@ function carregarDadosLive(callback) {
           // ── EMBOSSING ───────────────────────────────────────────────────
           if (json.embossing) {
             var e = json.embossing;
-            if (e.embDia   && e.embDia.length > 0) DE.embDia       = e.embDia;
-            if (e.metaDia  && e.metaDia  > 0)      DE.metaDia      = e.metaDia;
-            if (e.metaMes  && e.metaMes  > 0)      DE.metaMes      = e.metaMes;
-            if (e.realizadoMes !== undefined)       DE.realizadoMes = e.realizadoMes;
-            if (e.pctMeta  !== undefined)           DE.pctMeta      = e.pctMeta;
-            if (e.mesAtual)                         DE.mesAtual     = e.mesAtual;
-            // SLA mensal histórico (idemia/thales por mês)
-            if (e.meses && e.meses.length > 0) {
-              // Reconstruir arrays DE.idemia, DE.thales, DE.meses, DE.volFab, DE.trans
-              // a partir dos dados ao vivo
-              // (mantém fallback estático se não vier)
-            }
+            if (e.embDia        && e.embDia.length > 0) DE.embDia        = e.embDia;
+            if (e.metaDia       && e.metaDia  > 0)      DE.metaDia       = e.metaDia;
+            if (e.metaMes       && e.metaMes  > 0)      DE.metaMes       = e.metaMes;
+            if (e.metaPF        !== undefined)           DE.metaPF        = e.metaPF;
+            if (e.metaGOLD      !== undefined)           DE.metaGOLD      = e.metaGOLD;
+            if (e.realizadoMes  !== undefined)           DE.realizadoMes  = e.realizadoMes;
+            if (e.realizadoPF   !== undefined)           DE.realizadoPF   = e.realizadoPF;
+            if (e.realizadoGOLD !== undefined)           DE.realizadoGOLD = e.realizadoGOLD;
+            if (e.realizadoMEI  !== undefined)           DE.realizadoMEI  = e.realizadoMEI;
+            if (e.pctMeta       !== undefined)           DE.pctMeta       = e.pctMeta;
+            if (e.mesAtual)                              DE.mesAtual      = e.mesAtual;
+            if (e.historico     && e.historico.length > 0) DE.historico   = e.historico;
           }
 
           // ── SLA ─────────────────────────────────────────────────────────
@@ -554,10 +555,18 @@ var DE = {
   ],
   embDia:       [{d:'01/06',v:21516},{d:'02/06',v:19140}],
   metaDia:      10585,
-  metaMes:      285800,
-  realizadoMes: 40656,
-  pctMeta:      14.23,
-  mesAtual:     'Jun/2026'
+  metaMes:      21985,
+  metaPF:       19786,
+  metaGOLD:     2198,
+  realizadoMes: 19990,
+  realizadoPF:  15347,
+  realizadoGOLD:4522,
+  realizadoMEI: 121,
+  pctMeta:      90.93,
+  mesAtual:     'Jun/2026',
+  historico:    [
+    {mes:'Jun',metaPF:19786,metaGOLD:2198,metaMEI:0,metaTotal:21985,realPF:15347,realGOLD:4522,realMEI:121,realTotal:19990,pctMeta:90.93}
+  ]
 };
 
 var DEST = {
@@ -764,13 +773,67 @@ function renderEmbossing() {
   // KPI de meta/realizado do mês atual (embossing diário)
   var pctCls = DE.pctMeta >= 90 ? 'kpi-ok' : DE.pctMeta >= 70 ? 'kpi-warn' : 'kpi-danger';
 
+  // Tabela Meta Período vs Realizado — usa histórico quando filtrando por mês específico
+  var sel = document.getElementById('e-sel-mes').value;
+  var mesLabel = sel !== 'all' ? DE.meses[parseInt(sel)] : null;
+  var dadosMes = null;
+  if (mesLabel && DE.historico) {
+    dadosMes = DE.historico.filter(function(h){ return h.mes === mesLabel; })[0] || null;
+  }
+  // Se for mês atual sem histórico, usar dados ao vivo
+  if (!dadosMes && mesLabel === DE.mesAtual.split('/')[0]) {
+    dadosMes = {
+      metaPF: DE.metaPF||0, metaGOLD: DE.metaGOLD||0, metaMEI: 0,
+      metaTotal: DE.metaMes||0, realPF: DE.realizadoPF||0,
+      realGOLD: DE.realizadoGOLD||0, realMEI: DE.realizadoMEI||0,
+      realTotal: DE.realizadoMes||0, pctMeta: DE.pctMeta||0
+    };
+  }
+  // Para "Todos os meses", usar mês atual
+  if (!dadosMes) {
+    dadosMes = {
+      metaPF: DE.metaPF||0, metaGOLD: DE.metaGOLD||0, metaMEI: 0,
+      metaTotal: DE.metaMes||0, realPF: DE.realizadoPF||0,
+      realGOLD: DE.realizadoGOLD||0, realMEI: DE.realizadoMEI||0,
+      realTotal: DE.realizadoMes||0, pctMeta: DE.pctMeta||0
+    };
+  }
+  var tabelaHTML =
+    '<div style="grid-column:1/-1;overflow-x:auto;margin-top:4px">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+    '<thead><tr style="background:#4d7cfe22">' +
+    '<th style="padding:6px 12px;text-align:left;color:var(--muted)">Descrição</th>' +
+    '<th style="padding:6px 12px;text-align:right;color:var(--muted)">PF</th>' +
+    '<th style="padding:6px 12px;text-align:right;color:var(--muted)">GOLD</th>' +
+    '<th style="padding:6px 12px;text-align:right;color:var(--muted)">MEI</th>' +
+    '<th style="padding:6px 12px;text-align:right;color:var(--muted)">Total</th>' +
+    '<th style="padding:6px 12px;text-align:right;color:var(--muted)">%</th>' +
+    '</tr></thead><tbody>' +
+    '<tr style="border-top:1px solid var(--border)">' +
+    '<td style="padding:6px 12px;color:var(--text)">Meta Período</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.metaPF) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.metaGOLD) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.metaMEI) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right;font-weight:600">' + fmtN(dadosMes.metaTotal) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">—</td>' +
+    '</tr>' +
+    '<tr style="border-top:1px solid var(--border)">' +
+    '<td style="padding:6px 12px;color:var(--text)">Realizado</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.realPF) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.realGOLD) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.realMEI) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right;font-weight:600">' + fmtN(dadosMes.realTotal) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right;color:' + (dadosMes.pctMeta>=90?'#5cb85c':dadosMes.pctMeta>=70?'#f5a623':'#e24b4a') + ';font-weight:600">' + dadosMes.pctMeta + '%</td>' +
+    '</tr>' +
+    '</tbody></table></div>';
+
   document.getElementById('e-kpis').innerHTML =
-    '<div class="kpi-card"><div class="kpi-label">Realizado ' + (DE.mesAtual||'Mês') + '</div><div class="kpi-value">' + fmtN(DE.realizadoMes) + '</div><div class="kpi-sub">cartoes embossados</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Meta Período</div><div class="kpi-value">' + fmtN(DE.metaMes) + '</div><div class="kpi-sub">meta do mês</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">% vs Meta</div><div class="kpi-value ' + pctCls + '">' + DE.pctMeta + '%</div><div class="kpi-sub">realizado / meta</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Realizado ' + (DE.mesAtual||'Mês') + '</div><div class="kpi-value ' + pctCls + '">' + fmtN(DE.realizadoMes) + '</div><div class="kpi-sub">' + DE.pctMeta + '% da meta</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Meta Período</div><div class="kpi-value">' + fmtN(DE.metaMes) + '</div><div class="kpi-sub">PF + GOLD + MEI</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Meta Dia</div><div class="kpi-value">' + fmtN(DE.metaDia) + '</div><div class="kpi-sub">cartoes/dia</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">SLA no Prazo</div><div class="kpi-value ' + ppCls + '">' + pp + '%</div><div class="kpi-sub">antecipado + dentro</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">Fora do Prazo</div><div class="kpi-value kpi-danger">' + fmtN(fora) + '</div><div class="kpi-sub">' + (totI > 0 ? Math.round(fora/totI*100) : 0) + '% Idemia</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Meta Dia</div><div class="kpi-value">' + fmtN(DE.metaDia) + '</div><div class="kpi-sub">cartoes/dia</div></div>';
+    tabelaHTML;
 
   // Tabela fabrica
   var fabRows = [
@@ -836,24 +899,29 @@ function renderEmbossing() {
 
   if (single) {
     var si = idxs[0];
+    // Para meses sem dados nos arrays estáticos (ex: Junho), usar zeros
+    var dFab   = DE.volFab[si]  || {biorc:0, gold:0};
+    var dIdemia= DE.idemia[si]  || {ant:0, den:0, fora:0, total:0};
+    var dThales= DE.thales[si]  || {den:0, fora:0, total:0};
+    var dTrans = DE.trans[si]   || {mobi:0, flash:0, te:0};
     chartsE.fab = new Chart(document.getElementById('e-chart-fab'), {
       type:'doughnut',
-      data:{ labels:['PF','Gold','MEI'], datasets:[{ data:[DE.volFab[si].biorc,DE.volFab[si].gold,DE.thales[si].total], backgroundColor:['#4d7cfe','#5b8ffd','#38d9a9'], borderWidth:0 }] },
+      data:{ labels:['PF','Gold','MEI'], datasets:[{ data:[dFab.biorc,dFab.gold,dThales.total], backgroundColor:['#4d7cfe','#5b8ffd','#38d9a9'], borderWidth:0 }] },
       options:donutOpts()
     });
     chartsE.sla = new Chart(document.getElementById('e-chart-sla'), {
       type:'doughnut',
-      data:{ labels:['Antecipado','Dentro','Fora'], datasets:[{ data:[DE.idemia[si].ant,DE.idemia[si].den,DE.idemia[si].fora], backgroundColor:['#5cb85c','#4d7cfe','#e24b4a'], borderWidth:0 }] },
+      data:{ labels:['Antecipado','Dentro','Fora'], datasets:[{ data:[dIdemia.ant,dIdemia.den,dIdemia.fora], backgroundColor:['#5cb85c','#4d7cfe','#e24b4a'], borderWidth:0 }] },
       options:donutOpts()
     });
     chartsE.trans = new Chart(document.getElementById('e-chart-trans'), {
       type:'doughnut',
-      data:{ labels:['Mobi','Flash','Total Express'], datasets:[{ data:[DE.trans[si].mobi,DE.trans[si].flash,DE.trans[si].te], backgroundColor:['#4d7cfe','#f5a623','#9b59b6'], borderWidth:0 }] },
+      data:{ labels:['Mobi','Flash','Total Express'], datasets:[{ data:[dTrans.mobi,dTrans.flash,dTrans.te], backgroundColor:['#4d7cfe','#f5a623','#9b59b6'], borderWidth:0 }] },
       options:donutOpts()
     });
     chartsE.thales = new Chart(document.getElementById('e-chart-thales'), {
       type:'doughnut',
-      data:{ labels:['Dentro','Fora'], datasets:[{ data:[DE.thales[si].den,DE.thales[si].fora], backgroundColor:['#5cb85c','#e24b4a'], borderWidth:0 }] },
+      data:{ labels:['Dentro','Fora'], datasets:[{ data:[dThales.den,dThales.fora], backgroundColor:['#5cb85c','#e24b4a'], borderWidth:0 }] },
       options:donutOpts('right')
     });
   } else {
@@ -902,14 +970,16 @@ function renderEmbossing() {
   var canvas  = document.getElementById('e-chart-emb');
   var noData  = document.getElementById('e-no-emb');
   var titleEl = document.getElementById('e-title-emb');
-  if (single && idxs[0] !== 4) {
+  var mesAtualLabel = DE.mesAtual ? DE.mesAtual.split('/')[0] : '';
+  var isCurrentMonth = single && DE.meses[idxs[0]] === mesAtualLabel;
+  if (single && !isCurrentMonth) {
     canvas.style.display  = 'none';
     noData.style.display  = 'flex';
     titleEl.textContent   = 'Embossing Diario - Meta vs Realizado';
   } else {
     canvas.style.display  = 'block';
     noData.style.display  = 'none';
-    titleEl.textContent   = 'Embossing Diario - Meta vs Realizado (Mai/26)';
+    titleEl.textContent   = 'Embossing Diario - Meta vs Realizado (' + DE.mesAtual + ')';
     chartsE.emb = new Chart(canvas, {
       type:'bar',
       data:{ labels: DE.embDia.map(function(d){ return d.d; }), datasets:[
