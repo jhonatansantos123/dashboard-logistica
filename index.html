@@ -470,16 +470,9 @@ function carregarDadosLive(callback) {
             if (e.pctMeta       !== undefined)           DE.pctMeta       = e.pctMeta;
             if (e.mesAtual)                              DE.mesAtual      = e.mesAtual;
             if (e.historico     && e.historico.length > 0) DE.historico   = e.historico;
-          }
-
-          // ── SLA ─────────────────────────────────────────────────────────
-          if (json.sla) {
-            var s = json.sla;
-            if (s.idemia && s.idemia.length > 0) {
-              DE.meses  = s.idemia.map(function(m){ return m.mes; });
-              DE.idemia = s.idemia.map(function(m){ return {total:m.total,ant:m.ant,den:m.den,fora:m.fora}; });
-
-              // Sincronizar select de embossing com os meses recebidos
+            // DE.meses vem do embossing — define os meses do dropdown
+            if (e.meses && e.meses.length > 0) {
+              DE.meses = e.meses.map(function(m){ return m.mes || m; });
               var eSel = document.getElementById('e-sel-mes');
               if (eSel) {
                 var MESES_LABEL = {
@@ -496,16 +489,33 @@ function carregarDadosLive(callback) {
                 });
               }
             }
+          }
+
+          // ── SLA ─────────────────────────────────────────────────────────
+          if (json.sla) {
+            var s = json.sla;
+            // Alinha SLA ao DE.meses (definido pelo embossing) via mapa por nome
+            if (s.idemia && s.idemia.length > 0) {
+              var _iMap = {};
+              s.idemia.forEach(function(m){ _iMap[m.mes] = {total:m.total,ant:m.ant,den:m.den,fora:m.fora}; });
+              DE.idemia = DE.meses.map(function(m){ return _iMap[m] || {total:0,ant:0,den:0,fora:0}; });
+            }
             if (s.thales && s.thales.length > 0) {
-              DE.thales = s.thales.map(function(m){ return {total:m.total,den:m.den,fora:m.fora}; });
+              var _tMap = {};
+              s.thales.forEach(function(m){ _tMap[m.mes] = {total:m.total,den:m.den,fora:m.fora}; });
+              DE.thales = DE.meses.map(function(m){ return _tMap[m] || {total:0,den:0,fora:0}; });
             }
             // Distribuicao por transportadora (Idemia)
             if (s.trans && s.trans.length > 0) {
-              DE.trans = s.trans;
+              var _trMap = {};
+              s.trans.forEach(function(m){ _trMap[m.mes] = {mobi:m.mobi||0,flash:m.flash||0,te:m.te||0}; });
+              DE.trans = DE.meses.map(function(m){ return _trMap[m] || {mobi:0,flash:0,te:0}; });
             }
             // Volume por fabrica mensal
             if (s.volFab && s.volFab.length > 0) {
-              DE.volFab = s.volFab;
+              var _vfMap = {};
+              s.volFab.forEach(function(m){ _vfMap[m.mes] = {biorc:m.biorc||0,gold:m.gold||0}; });
+              DE.volFab = DE.meses.map(function(m){ return _vfMap[m] || {biorc:0,gold:0}; });
             }
           }
 
