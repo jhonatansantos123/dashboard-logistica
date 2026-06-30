@@ -164,6 +164,16 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
       <tbody id="c-tab"></tbody>
     </table>
   </div>
+
+  <div class="table-card" style="margin-top:24px">
+    <div class="card-title" style="margin-bottom:4px">Cartoes Destruidos e Prejuizo</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Prejuizo = Quantidade destruida x Unit. Log do mes</div>
+    <div id="c-destruidos-kpis" class="kpi-grid" style="margin-bottom:16px"></div>
+    <table>
+      <thead><tr><th>Mes</th><th>Qtd. Destruida</th><th>Unit. Log (R$)</th><th>Prejuizo (R$)</th></tr></thead>
+      <tbody id="c-destruidos-tab"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- PAGINA 2: EMBOSSING & SLA -->
@@ -470,67 +480,31 @@ function carregarDadosLive(callback) {
             if (e.pctMeta       !== undefined)           DE.pctMeta       = e.pctMeta;
             if (e.mesAtual)                              DE.mesAtual      = e.mesAtual;
             if (e.historico     && e.historico.length > 0) DE.historico   = e.historico;
-            // DE.meses vem do embossing — define os meses do dropdown
-            if (e.meses && e.meses.length > 0) {
-              DE.meses = e.meses.map(function(m){ return m.mes || m; });
-              var eSel = document.getElementById('e-sel-mes');
-              if (eSel) {
-                var MESES_LABEL = {
-                  'Jan':'Janeiro','Fev':'Fevereiro','Mar':'Marco','Abr':'Abril',
-                  'Mai':'Maio','Jun':'Junho','Jul':'Julho','Ago':'Agosto',
-                  'Set':'Setembro','Out':'Outubro','Nov':'Novembro','Dez':'Dezembro'
-                };
-                while (eSel.options.length > 1) eSel.remove(1);
-                DE.meses.forEach(function(m, i) {
-                  var opt = document.createElement('option');
-                  opt.value = i;
-                  opt.text  = MESES_LABEL[m] || m;
-                  eSel.add(opt);
-                });
-              }
-            }
           }
 
           // ── SLA ─────────────────────────────────────────────────────────
           if (json.sla) {
             var s = json.sla;
-            // Alinha SLA ao DE.meses (definido pelo embossing) via mapa por nome
             if (s.idemia && s.idemia.length > 0) {
-              var _iMap = {};
-              s.idemia.forEach(function(m){ _iMap[m.mes] = {total:m.total,ant:m.ant,den:m.den,fora:m.fora}; });
-              DE.idemia = DE.meses.map(function(m){ return _iMap[m] || {total:0,ant:0,den:0,fora:0}; });
+              DE.meses  = s.idemia.map(function(m){ return m.mes; });
+              DE.idemia = s.idemia.map(function(m){ return {total:m.total,ant:m.ant,den:m.den,fora:m.fora}; });
             }
             if (s.thales && s.thales.length > 0) {
-              var _tMap = {};
-              s.thales.forEach(function(m){ _tMap[m.mes] = {total:m.total,den:m.den,fora:m.fora}; });
-              DE.thales = DE.meses.map(function(m){ return _tMap[m] || {total:0,den:0,fora:0}; });
+              DE.thales = s.thales.map(function(m){ return {total:m.total,den:m.den,fora:m.fora}; });
             }
-            // Distribuicao por transportadora (Idemia)
-            if (s.trans && s.trans.length > 0) {
-              var _trMap = {};
-              s.trans.forEach(function(m){ _trMap[m.mes] = {mobi:m.mobi||0,flash:m.flash||0,te:m.te||0}; });
-              DE.trans = DE.meses.map(function(m){ return _trMap[m] || {mobi:0,flash:0,te:0}; });
-            }
-            // Volume por fabrica mensal
-            if (s.volFab && s.volFab.length > 0) {
-              var _vfMap = {};
-              s.volFab.forEach(function(m){ _vfMap[m.mes] = {biorc:m.biorc||0,gold:m.gold||0}; });
-              DE.volFab = DE.meses.map(function(m){ return _vfMap[m] || {biorc:0,gold:0}; });
-            }
-          }
-
-          // ── ESTOQUE ─────────────────────────────────────────────────────
-          if (json.estoque) {
-            var est = json.estoque;
-            if (est.cartao  && est.cartao.length  > 0) DEST.cartao  = est.cartao;
-            if (est.berco   && est.berco.length   > 0) DEST.berco   = est.berco;
-            if (est.histPF  && est.histPF.length  > 0) DEST.histPF  = est.histPF;
-            if (est.histMEI && est.histMEI.length > 0) DEST.histMEI = est.histMEI;
-            if (est.dataAtualizacao || est.dataRef)    DEST.dataRef = est.dataAtualizacao || est.dataRef;
           }
 
           // ── CUSTÓDIA ────────────────────────────────────────────────────
           if (json.custodia) { DC_CUST = json.custodia; }
+
+          // ── CARTÕES DESTRUÍDOS ──────────────────────────────────────────
+          if (json.destruidos && json.destruidos.meses) {
+            DD = json.destruidos;
+            var pgCustosAtiva = document.getElementById('page-custos').classList.contains('active');
+            var pgCustodiaAtiva = document.getElementById('page-custodia').classList.contains('active');
+            if (pgCustosAtiva && typeof renderCustos === 'function') renderCustos();
+            if (pgCustodiaAtiva && typeof renderCustodia === 'function') renderCustodia();
+          }
 
           var agora = new Date();
           document.getElementById('ultima-atualizacao').textContent =
@@ -791,6 +765,30 @@ function renderCustos() {
     ].concat(single ? [] : [{ label: 'Meta 95%', data: labels.map(function(){ return 95; }), borderColor: '#e24b4a', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false, type: 'line' }]) },
     options: Object.assign({}, CO, { scales: Object.assign({}, CO.scales, { y: Object.assign({}, CO.scales.y, { min: 75, ticks: Object.assign({}, CO.scales.y.ticks, { callback: function(v) { return v + '%'; } }) }) }) })
   });
+
+  renderDestruidos();
+}
+
+function renderDestruidos() {
+  var kpiEl = document.getElementById('c-destruidos-kpis');
+  var tabEl = document.getElementById('c-destruidos-tab');
+  if (!kpiEl || !tabEl) return;
+
+  if (!DD.meses || DD.meses.length === 0) {
+    kpiEl.innerHTML = '<div class="kpi-card"><div class="kpi-label">Sem dados</div><div class="kpi-value">—</div><div class="kpi-sub">Conecte o Apps Script</div></div>';
+    tabEl.innerHTML = '';
+    return;
+  }
+
+  kpiEl.innerHTML =
+    '<div class="kpi-card"><div class="kpi-label">Total Destruidos (ano)</div><div class="kpi-value">' + fmtN(DD.totalQtd) + '</div><div class="kpi-sub">cartoes</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Prejuizo Total (ano)</div><div class="kpi-value kpi-danger">' + fmtRd(DD.prejuizoTotal) + '</div><div class="kpi-sub">acumulado 2026</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Media Mensal</div><div class="kpi-value">' + fmtN(Math.round(DD.totalQtd/DD.meses.length)) + '</div><div class="kpi-sub">cartoes/mes</div></div>';
+
+  tabEl.innerHTML = DD.meses.map(function(m) {
+    var nota = m.estimado ? ' <span style="color:var(--muted);font-size:11px" title="Mes ainda nao fechado - usando Unit. Log estimado">(est.)</span>' : '';
+    return '<tr><td>' + m.mes + '</td><td>' + fmtN(m.qtd) + '</td><td>' + fmtRd(m.unitLog) + nota + '</td><td style="color:var(--danger);font-weight:600">' + fmtRd(m.prejuizo) + nota + '</td></tr>';
+  }).join('');
 }
 
 // ── EMBOSSING ──
@@ -806,27 +804,27 @@ function renderEmbossing() {
 
   var totI=0,totT=0,ant=0,den=0,fora=0,tMobi=0;
   idxs.forEach(function(i) {
-    if (!DE.idemia[i] || !DE.thales[i]) return;
+    if (!DE.idemia[i] || !DE.thales[i] || !DE.trans[i]) return;
     totI  += DE.idemia[i].total;  totT  += DE.thales[i].total;
     ant   += DE.idemia[i].ant;    den   += DE.idemia[i].den;
-    fora  += DE.idemia[i].fora;   tMobi += (DE.trans[i] ? DE.trans[i].mobi : 0);
+    fora  += DE.idemia[i].fora;   tMobi += DE.trans[i].mobi;
   });
   var tot = totI + totT;
   var pp = totI > 0 ? Math.round((ant+den)/totI*100) : 0;
   var ppCls = pp >= 90 ? 'kpi-ok' : pp >= 80 ? 'kpi-warn' : 'kpi-danger';
 
-  // ── Dados do período selecionado ──────────────────────────────────────
-  var sel = document.getElementById('e-sel-mes').value;
-  var isSingle = sel !== 'all';
-  var mesLabel = isSingle ? DE.meses[parseInt(sel)] : null;
+  // KPI de meta/realizado do mês atual (embossing diário)
+  var pctCls = DE.pctMeta >= 90 ? 'kpi-ok' : DE.pctMeta >= 70 ? 'kpi-warn' : 'kpi-danger';
 
-  // 1º: tenta historico
+  // Tabela Meta Período vs Realizado — usa histórico quando filtrando por mês específico
+  var sel = document.getElementById('e-sel-mes').value;
+  var mesLabel = sel !== 'all' ? DE.meses[parseInt(sel)] : null;
   var dadosMes = null;
   if (mesLabel && DE.historico) {
     dadosMes = DE.historico.filter(function(h){ return h.mes === mesLabel; })[0] || null;
   }
-  // 2º: mês atual sem entrada no historico — usa dados ao vivo
-  if (!dadosMes && isSingle && mesLabel === (DE.mesAtual||'').split('/')[0]) {
+  // Se for mês atual sem histórico, usar dados ao vivo
+  if (!dadosMes && mesLabel === DE.mesAtual.split('/')[0]) {
     dadosMes = {
       metaPF: DE.metaPF||0, metaGOLD: DE.metaGOLD||0, metaMEI: 0,
       metaTotal: DE.metaMes||0, realPF: DE.realizadoPF||0,
@@ -834,21 +832,7 @@ function renderEmbossing() {
       realTotal: DE.realizadoMes||0, pctMeta: DE.pctMeta||0
     };
   }
-  // 3º: mês histórico sem entrada — calcula dos arrays volFab + thales
-  if (!dadosMes && isSingle) {
-    var mi = parseInt(sel);
-    var vf = DE.volFab[mi] || {biorc:0, gold:0};
-    var th = DE.thales[mi] || {total:0};
-    var rPF   = vf.biorc || 0;
-    var rGOLD = vf.gold  || 0;
-    var rMEI  = th.total || 0;
-    dadosMes = {
-      metaPF: null, metaGOLD: null, metaMEI: null, metaTotal: null,
-      realPF: rPF, realGOLD: rGOLD, realMEI: rMEI,
-      realTotal: rPF + rGOLD + rMEI, pctMeta: null
-    };
-  }
-  // 4º: "Todos os meses" — usa mês atual como referência
+  // Para "Todos os meses", usar mês atual
   if (!dadosMes) {
     dadosMes = {
       metaPF: DE.metaPF||0, metaGOLD: DE.metaGOLD||0, metaMEI: 0,
@@ -857,21 +841,6 @@ function renderEmbossing() {
       realTotal: DE.realizadoMes||0, pctMeta: DE.pctMeta||0
     };
   }
-
-  // ── KPI cards — refletem período selecionado ──────────────────────────
-  var realKpi = isSingle ? dadosMes.realTotal : DE.realizadoMes;
-  var metaKpi = isSingle ? dadosMes.metaTotal : DE.metaMes;
-  var pctKpi  = isSingle
-    ? (dadosMes.pctMeta !== null ? dadosMes.pctMeta
-        : (metaKpi > 0 ? +(realKpi / metaKpi * 100).toFixed(2) : null))
-    : DE.pctMeta;
-  var pctCls = (pctKpi !== null && pctKpi >= 90) ? 'kpi-ok' : (pctKpi !== null && pctKpi >= 70) ? 'kpi-warn' : 'kpi-danger';
-  var mesLabel2 = isSingle ? (mesLabel + '/2026') : (DE.mesAtual||'Mês');
-  var pctStr = pctKpi !== null ? pctKpi + '% da meta' : 'sem meta cadastrada';
-
-  function fmtOrDash(v) { return v !== null ? fmtN(v) : '—'; }
-  function pctColor(v) { return v>=90?'#5cb85c':v>=70?'#f5a623':'#e24b4a'; }
-
   var tabelaHTML =
     '<div style="grid-column:1/-1;overflow-x:auto;margin-top:4px">' +
     '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
@@ -885,10 +854,10 @@ function renderEmbossing() {
     '</tr></thead><tbody>' +
     '<tr style="border-top:1px solid var(--border)">' +
     '<td style="padding:6px 12px;color:var(--text)">Meta Período</td>' +
-    '<td style="padding:6px 12px;text-align:right">' + fmtOrDash(dadosMes.metaPF) + '</td>' +
-    '<td style="padding:6px 12px;text-align:right">' + fmtOrDash(dadosMes.metaGOLD) + '</td>' +
-    '<td style="padding:6px 12px;text-align:right">' + fmtOrDash(dadosMes.metaMEI) + '</td>' +
-    '<td style="padding:6px 12px;text-align:right;font-weight:600">' + fmtOrDash(dadosMes.metaTotal) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.metaPF) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.metaGOLD) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.metaMEI) + '</td>' +
+    '<td style="padding:6px 12px;text-align:right;font-weight:600">' + fmtN(dadosMes.metaTotal) + '</td>' +
     '<td style="padding:6px 12px;text-align:right">—</td>' +
     '</tr>' +
     '<tr style="border-top:1px solid var(--border)">' +
@@ -897,14 +866,14 @@ function renderEmbossing() {
     '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.realGOLD) + '</td>' +
     '<td style="padding:6px 12px;text-align:right">' + fmtN(dadosMes.realMEI) + '</td>' +
     '<td style="padding:6px 12px;text-align:right;font-weight:600">' + fmtN(dadosMes.realTotal) + '</td>' +
-    '<td style="padding:6px 12px;text-align:right;' + (dadosMes.pctMeta!==null?'color:'+pctColor(dadosMes.pctMeta)+';font-weight:600':'color:var(--muted)') + '">' + (dadosMes.pctMeta!==null ? dadosMes.pctMeta+'%' : '—') + '</td>' +
+    '<td style="padding:6px 12px;text-align:right;color:' + (dadosMes.pctMeta>=90?'#5cb85c':dadosMes.pctMeta>=70?'#f5a623':'#e24b4a') + ';font-weight:600">' + dadosMes.pctMeta + '%</td>' +
     '</tr>' +
     '</tbody></table></div>';
 
   document.getElementById('e-kpis').innerHTML =
-    '<div class="kpi-card"><div class="kpi-label">Realizado ' + mesLabel2 + '</div><div class="kpi-value ' + pctCls + '">' + fmtN(realKpi) + '</div><div class="kpi-sub">' + pctStr + '</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Meta Período</div><div class="kpi-value">' + fmtOrDash(metaKpi) + '</div><div class="kpi-sub">PF + GOLD + MEI</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">% Realizado</div><div class="kpi-value ' + pctCls + '">' + (pctKpi !== null ? pctKpi + '%' : '—') + '</div><div class="kpi-sub">Meta dia: ' + fmtN(DE.metaDia) + '/dia</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Realizado ' + (DE.mesAtual||'Mês') + '</div><div class="kpi-value ' + pctCls + '">' + fmtN(DE.realizadoMes) + '</div><div class="kpi-sub">' + DE.pctMeta + '% da meta</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Meta Período</div><div class="kpi-value">' + fmtN(DE.metaMes) + '</div><div class="kpi-sub">PF + GOLD + MEI</div></div>' +
+    '<div class="kpi-card"><div class="kpi-label">Meta Dia</div><div class="kpi-value">' + fmtN(DE.metaDia) + '</div><div class="kpi-sub">cartoes/dia</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">SLA no Prazo</div><div class="kpi-value ' + ppCls + '">' + pp + '%</div><div class="kpi-sub">antecipado + dentro</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">Fora do Prazo</div><div class="kpi-value kpi-danger">' + fmtN(fora) + '</div><div class="kpi-sub">' + (totI > 0 ? Math.round(fora/totI*100) : 0) + '% Idemia</div></div>' +
     tabelaHTML;
@@ -937,7 +906,7 @@ function renderEmbossing() {
   // Tabela trans
   var th = '';
   idxs.forEach(function(i) {
-    var d = DE.trans[i] || {mobi:0, flash:0, te:0};
+    var d = DE.trans[i];
     var t = d.mobi + d.flash + d.te;
     th += '<tr><td>' + DE.meses[i] + '/26</td><td>' + fmtN(t) + '</td>' +
           '<td>' + fmtN(d.mobi) + '</td><td style="color:#4d7cfe;font-weight:600">' + pct(d.mobi,t) + '</td>' +
@@ -946,7 +915,7 @@ function renderEmbossing() {
   });
   if (!single) {
     var yt = {mobi:0,flash:0,te:0};
-    idxs.forEach(function(i){ var t=DE.trans[i]||{mobi:0,flash:0,te:0}; yt.mobi+=t.mobi; yt.flash+=t.flash; yt.te+=t.te; });
+    idxs.forEach(function(i){ yt.mobi+=DE.trans[i].mobi; yt.flash+=DE.trans[i].flash; yt.te+=DE.trans[i].te; });
     var tt = yt.mobi + yt.flash + yt.te;
     th += '<tr class="row-total"><td>Total</td><td>' + fmtN(tt) + '</td>' +
           '<td>' + fmtN(yt.mobi) + '</td><td style="color:#4d7cfe">' + pct(yt.mobi,tt) + '</td>' +
@@ -1021,9 +990,9 @@ function renderEmbossing() {
     chartsE.trans = new Chart(document.getElementById('e-chart-trans'), {
       type:'bar',
       data:{ labels:labels, datasets:[
-        { label:'Mobi',  data:idxs.map(function(i){ var t=DE.trans[i]||{mobi:0,flash:0,te:0}; return t.mobi; }),  backgroundColor:'#4d7cfe', borderRadius:2 },
-        { label:'Flash', data:idxs.map(function(i){ var t=DE.trans[i]||{mobi:0,flash:0,te:0}; return t.flash; }), backgroundColor:'#f5a623', borderRadius:2 },
-        { label:'TE',    data:idxs.map(function(i){ var t=DE.trans[i]||{mobi:0,flash:0,te:0}; return t.te; }),    backgroundColor:'#9b59b6', borderRadius:2 }
+        { label:'Mobi',  data:idxs.map(function(i){ return DE.trans[i].mobi; }),  backgroundColor:'#4d7cfe', borderRadius:2 },
+        { label:'Flash', data:idxs.map(function(i){ return DE.trans[i].flash; }), backgroundColor:'#f5a623', borderRadius:2 },
+        { label:'TE',    data:idxs.map(function(i){ return DE.trans[i].te; }),    backgroundColor:'#9b59b6', borderRadius:2 }
       ]},
       options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{ x:{stacked:true,grid:{display:false},ticks:{color:'#7a8099'}},
@@ -1070,7 +1039,7 @@ function renderEmbossing() {
 
 // ── ESTOQUE ──
 function renderEstoque() {
-  document.getElementById('est-data-ref').textContent = 'Referencia: ' + (DEST.dataRef || '01/jun/2026');
+  document.getElementById('est-data-ref').textContent = 'Referencia: 01/jun/2026';
 
   var totCartao = DEST.cartao.reduce(function(s,r){ return s+r.total; }, 0);
   var totBerco  = DEST.berco.reduce(function(s,r){ return s+r.total; }, 0);
@@ -1126,21 +1095,17 @@ function renderEstoque() {
     options:Object.assign({},CO,{scales:Object.assign({},CO.scales,{y:Object.assign({},CO.scales.y,{ticks:Object.assign({},CO.scales.y.ticks,{callback:lineTicks})})})})
   });
 
-  // Distribuicao PF: Idemia vs Thales (da carta berco)
-  var bercoPF  = DEST.berco.find(function(r){ return r.prod==='PF';  }) || {idemia:0, thales:0};
-  var bercoMEI = DEST.berco.find(function(r){ return r.prod==='MEI'; }) || {idemia:0, thales:0};
-
   chartsEst.pfDist = new Chart(document.getElementById('est-chart-pf-dist'), {
     type:'doughnut',
-    data:{ labels:['Idemia (PF)','Thales (PF)'],
-           datasets:[{ data:[bercoPF.idemia, bercoPF.thales], backgroundColor:['#4d7cfe','#38d9a9'], borderWidth:0 }] },
+    data:{ labels:['Folder Idemia','Envelope Idemia','Folder Thales','Envelope Thales'],
+           datasets:[{ data:[826297,764054,24256,22439], backgroundColor:['#4d7cfe','#5b8ffd','#38d9a9','#4dd6b0'], borderWidth:0 }] },
     options:donutOpts()
   });
 
   chartsEst.meiDist = new Chart(document.getElementById('est-chart-mei-dist'), {
     type:'doughnut',
-    data:{ labels:['Idemia (MEI)','Thales (MEI)'],
-           datasets:[{ data:[bercoMEI.idemia, bercoMEI.thales], backgroundColor:['#4d7cfe','#38d9a9'], borderWidth:0 }] },
+    data:{ labels:['Folder Thales','Envelope Thales'],
+           datasets:[{ data:[24256,22439], backgroundColor:['#38d9a9','#4dd6b0'], borderWidth:0 }] },
     options:donutOpts()
   });
 }
@@ -1153,25 +1118,12 @@ carregarDadosLive(function() {
   renderCustodia();
 });
 
-// ── AUTO-REFRESH a cada 5 minutos ──
-setInterval(function() {
-  carregarDadosLive(function() {
-    var pageAtiva = document.querySelector('.page.active');
-    if (pageAtiva) {
-      var id = pageAtiva.id;
-      if (id === 'page-custos')    renderCustos();
-      if (id === 'page-embossing') renderEmbossing();
-      if (id === 'page-estoque')   renderEstoque();
-      if (id === 'page-custodia')  renderCustodia();
-    }
-  });
-}, 5 * 60 * 1000);
-
 </script>
 
 <script>
 // ── CUSTODIA ──
 var DC_CUST = null; // Dados de custodia (carregados do Apps Script ou estaticos)
+var DD = { meses: [], totalQtd: 0, prejuizoTotal: 0 }; // Cartoes destruidos e prejuizo
 
 // Dados de exemplo enquanto Apps Script nao esta configurado
 var DC_CUST_DEMO = {
@@ -1256,7 +1208,31 @@ function renderCustodia() {
     '<div class="kpi-card"><div class="kpi-label">Clientes Unicos</div><div class="kpi-value">' + fmtN(d.clientesUnicos) + '</div><div class="kpi-sub">distintos</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">Variacao Mensal</div><div class="kpi-value ' + varCls + '">' + varTxt + '</div><div class="kpi-sub">' + varSub + '</div></div>' +
     '<div class="kpi-card"><div class="kpi-label">Principal Courier</div><div class="kpi-value" style="font-size:18px">' + (d.porCourier && d.porCourier[0] ? d.porCourier[0].nome : '-') + '</div><div class="kpi-sub">' + (d.porCourier && d.porCourier[0] ? fmtN(d.porCourier[0].qtd) + ' cartoes' : '') + '</div></div>' +
-    '<div class="kpi-card"><div class="kpi-label">Principal Estado</div><div class="kpi-value" style="font-size:18px">' + (d.porEstado && d.porEstado[0] ? d.porEstado[0].nome : '-') + '</div><div class="kpi-sub">' + (d.porEstado && d.porEstado[0] ? fmtN(d.porEstado[0].qtd) + ' cartoes' : '') + '</div></div>';
+    '<div class="kpi-card"><div class="kpi-label">Principal Estado</div><div class="kpi-value" style="font-size:18px">' + (d.porEstado && d.porEstado[0] ? d.porEstado[0].nome : '-') + '</div><div class="kpi-sub">' + (d.porEstado && d.porEstado[0] ? fmtN(d.porEstado[0].qtd) + ' cartoes' : '') + '</div></div>' +
+    (function() {
+      // Cartoes destruidos e prejuizo - usa mes filtrado ou consolidado
+      if (!DD.meses || DD.meses.length === 0) return '';
+      var qtdDestr = DD.totalQtd, prejDestr = DD.prejuizoTotal, labelDestr = 'Consolidado (ano)';
+
+      if (mesAtivo !== 'all') {
+        // mesAtivo vem no formato 'YYYY-MM' (ex: '2026-06') - converter para label tipo 'Jun'
+        var MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        var partesMes = String(mesAtivo).split('-');
+        var idxMes = partesMes.length > 1 ? parseInt(partesMes[1], 10) - 1 : -1;
+        var labelMatch = (idxMes >= 0 && idxMes < 12) ? MESES_ABREV[idxMes] : null;
+
+        var dObj = labelMatch ? DD.meses.find(function(m){ return m.mes === labelMatch; }) : null;
+        if (dObj) {
+          qtdDestr = dObj.qtd; prejDestr = dObj.prejuizo;
+        } else {
+          qtdDestr = 0; prejDestr = 0;
+        }
+        labelDestr = formatarMes(mesAtivo);
+      }
+
+      return '<div class="kpi-card"><div class="kpi-label">Cartoes Destruidos</div><div class="kpi-value kpi-danger">' + fmtN(qtdDestr) + '</div><div class="kpi-sub">' + labelDestr + '</div></div>' +
+             '<div class="kpi-card"><div class="kpi-label">Prejuizo Destruidos</div><div class="kpi-value kpi-danger">' + fmtRd(prejDestr) + '</div><div class="kpi-sub">' + labelDestr + '</div></div>';
+    })();
 
   // Tabela courier
   var tcHtml = '';
